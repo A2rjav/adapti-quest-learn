@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.grade-answer]  
 verify_jwt = false
+
+[functions.evolve-quiz]
+verify_jwt = false

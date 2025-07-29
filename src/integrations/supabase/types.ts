@@ -102,8 +102,11 @@ export type Database = {
           current_difficulty:
             | Database["public"]["Enums"]["difficulty_level"]
             | null
+          evolution_suggestions: Json | null
+          focus_area: string | null
           id: string
           is_active: boolean | null
+          mastery_score: number | null
           started_at: string
           topic_id: string
           total_questions: number | null
@@ -115,8 +118,11 @@ export type Database = {
           current_difficulty?:
             | Database["public"]["Enums"]["difficulty_level"]
             | null
+          evolution_suggestions?: Json | null
+          focus_area?: string | null
           id?: string
           is_active?: boolean | null
+          mastery_score?: number | null
           started_at?: string
           topic_id: string
           total_questions?: number | null
@@ -128,8 +134,11 @@ export type Database = {
           current_difficulty?:
             | Database["public"]["Enums"]["difficulty_level"]
             | null
+          evolution_suggestions?: Json | null
+          focus_area?: string | null
           id?: string
           is_active?: boolean | null
+          mastery_score?: number | null
           started_at?: string
           topic_id?: string
           total_questions?: number | null

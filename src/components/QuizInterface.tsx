@@ -195,24 +195,65 @@ const QuizInterface = ({ topicId, topicTitle, onQuizComplete }: QuizInterfacePro
       setAiFeedback(feedback);
       setShowFeedback(true);
 
-      // Adapt difficulty based on performance
-      if (newTotalQuestions >= 5) {
-        const accuracy = newCorrectAnswers / newTotalQuestions;
-        let newDifficulty = session.current_difficulty;
-        
-        if (accuracy > 0.7 && session.current_difficulty !== 'hard') {
-          newDifficulty = session.current_difficulty === 'easy' ? 'medium' : 'hard';
-        } else if (accuracy < 0.5 && session.current_difficulty !== 'easy') {
-          newDifficulty = session.current_difficulty === 'hard' ? 'medium' : 'easy';
-        }
+      // Use AI to analyze performance and evolve the quiz
+      if (newTotalQuestions >= 3) {
+        try {
+          // Get recent answers for AI analysis
+          const { data: recentAnswers } = await supabase
+            .from('user_answers')
+            .select(`
+              user_answer,
+              is_correct,
+              questions!inner(question_text, difficulty, question_type)
+            `)
+            .eq('session_id', session.id)
+            .order('answered_at', { ascending: false })
+            .limit(5);
 
-        if (newDifficulty !== session.current_difficulty) {
-          await supabase
-            .from('quiz_sessions')
-            .update({ current_difficulty: newDifficulty })
-            .eq('id', session.id);
-          
-          setSession({ ...session, current_difficulty: newDifficulty });
+          if (recentAnswers) {
+            const formattedAnswers = recentAnswers.map(answer => ({
+              question_text: answer.questions.question_text,
+              user_answer: answer.user_answer,
+              is_correct: answer.is_correct,
+              difficulty: answer.questions.difficulty,
+              question_type: answer.questions.question_type
+            }));
+
+            const { data: evolutionData } = await supabase.functions.invoke('evolve-quiz', {
+              body: {
+                sessionId: session.id,
+                currentTopicId: topicId,
+                recentAnswers: formattedAnswers
+              }
+            });
+
+            if (evolutionData) {
+              // Update difficulty if suggested
+              if (evolutionData.new_difficulty && evolutionData.new_difficulty !== session.current_difficulty) {
+                await supabase
+                  .from('quiz_sessions')
+                  .update({ current_difficulty: evolutionData.new_difficulty })
+                  .eq('id', session.id);
+                
+                setSession({ ...session, current_difficulty: evolutionData.new_difficulty });
+                
+                toast({
+                  title: "Quiz Evolved!",
+                  description: evolutionData.message_to_user || `Difficulty adjusted to ${evolutionData.new_difficulty}`,
+                });
+              }
+
+              // Show evolution message if provided
+              if (evolutionData.message_to_user && !evolutionData.new_difficulty) {
+                toast({
+                  title: "AI Learning Assessment",
+                  description: evolutionData.message_to_user,
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error evolving quiz:', error);
         }
       }
 
